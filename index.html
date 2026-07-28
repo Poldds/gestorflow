@@ -481,22 +481,15 @@ tbody tr:hover td{background:var(--surface-2);}
           <div>
             <div class="card">
               <div class="card-title">&#x1F465; Contatos</div>
-              <p class="tip">Clientes e fornecedores que aparecem nos lançamentos.</p>
+              <p class="tip">Nomes de pessoas e empresas que aparecem tanto em receitas quanto em despesas.</p>
               <div class="form-section">
                 <div class="form-row-inline">
-                  <div class="form-group"><label>Nome</label><input type="text" id="cad-contato" placeholder="Ex: Fornecedor ABC"/></div>
-                  <div class="form-group"><label>Tipo</label>
-                    <select id="cad-contato-tipo">
-                      <option value="cliente">Cliente</option>
-                      <option value="fornecedor">Fornecedor</option>
-                      <option value="ambos">Ambos</option>
-                    </select>
-                  </div>
+                  <div class="form-group"><label>Nome</label><input type="text" id="cad-contato" placeholder="Ex: João da Silva" onkeydown="if(event.key==='Enter') addContato()"/></div>
                   <div style="padding-top:18px"><button class="btn-sm" onclick="addContato()">+ Adicionar</button></div>
                 </div>
               </div>
               <div class="table-wrap"><table>
-                <thead><tr><th>Nome</th><th style="width:100px">Tipo</th><th style="width:50px"></th></tr></thead>
+                <thead><tr><th>Nome</th><th style="width:50px"></th></tr></thead>
                 <tbody id="tbody-contatos"></tbody>
               </table></div>
             </div>
@@ -911,7 +904,7 @@ function populateSelects(){
   const rDe = document.getElementById('r-de');
   if(rDe){
     const cur = rDe.value; rDe.innerHTML='';
-    cache.contatos.filter(c=>c.tipo==='cliente'||c.tipo==='ambos').forEach(c=>{
+    cache.contatos.forEach(c=>{
       rDe.innerHTML+=`<option value="${c.nome}">${c.nome}</option>`;
     });
     if(cur) setSelect('r-de',cur);
@@ -919,7 +912,7 @@ function populateSelects(){
   const dPara = document.getElementById('d-para');
   if(dPara){
     const cur = dPara.value; dPara.innerHTML='';
-    cache.contatos.filter(c=>c.tipo==='fornecedor'||c.tipo==='ambos').forEach(c=>{
+    cache.contatos.forEach(c=>{
       dPara.innerHTML+=`<option value="${c.nome}">${c.nome}</option>`;
     });
     if(cur) setSelect('d-para',cur);
@@ -933,15 +926,14 @@ function populateSelects(){
 }
 
 // ---- MINI MODAL ----
-let miniModalTipo = 'fornecedor';
+let miniModalCampo = 'd-para'; // qual select preencher depois de salvar
 
 function abrirMiniModal(tipo){
-  miniModalTipo = tipo;
-  const isForn = tipo==='fornecedor';
-  document.getElementById('mini-modal-title').textContent = isForn?'Novo fornecedor':'Novo cliente';
-  document.getElementById('mini-modal-label').textContent = isForn?'Nome do fornecedor':'Nome do cliente';
+  miniModalCampo = tipo==='fornecedor' ? 'd-para' : 'r-de';
+  document.getElementById('mini-modal-title').textContent = 'Novo contato';
+  document.getElementById('mini-modal-label').textContent = 'Nome';
   document.getElementById('mini-modal-input').value='';
-  document.getElementById('mini-modal-input').placeholder = isForn?'Ex: Fornecedor ABC':'Ex: Cliente XYZ';
+  document.getElementById('mini-modal-input').placeholder = 'Ex: João da Silva';
   document.getElementById('mini-modal-overlay').classList.add('show');
   setTimeout(()=>document.getElementById('mini-modal-input').focus(),100);
 }
@@ -956,19 +948,20 @@ async function confirmarMiniModal(){
   if(!nome) return;
   const existe = cache.contatos.find(c=>c.nome.toLowerCase()===nome.toLowerCase());
   if(existe){
-    setSelect(miniModalTipo==='fornecedor'?'d-para':'r-de', nome);
+    setSelect(miniModalCampo, nome);
     document.getElementById('mini-modal-overlay').classList.remove('show');
     toast('Já existia — selecionado!','var(--gold-dim)'); return;
   }
-  const tipoContato = miniModalTipo==='fornecedor'?'fornecedor':'cliente';
-  const {data, error} = await sb.from('contatos').insert({user_id:currentUser.id,nome,tipo:tipoContato}).select().single();
+  const {data, error} = await sb.from('contatos').insert({user_id:currentUser.id,nome,tipo:'ambos'}).select().single();
   if(!error && data){
     cache.contatos.push(data);
     cache.contatos.sort((a,b)=>a.nome.localeCompare(b.nome));
     populateSelects();
-    setSelect(miniModalTipo==='fornecedor'?'d-para':'r-de', nome);
+    setSelect(miniModalCampo, nome);
     document.getElementById('mini-modal-overlay').classList.remove('show');
     toast(`"${nome}" cadastrado e selecionado!`);
+  } else {
+    toast('Erro: '+(error?.message||'não foi possível salvar'),'var(--red)');
   }
 }
 
@@ -1247,9 +1240,8 @@ async function delSubcat(id){
 
 async function addContato(){
   const nome=document.getElementById('cad-contato').value.trim();
-  const tipo=document.getElementById('cad-contato-tipo').value;
   if(!nome){toast('Informe o nome','var(--red)');return;}
-  const {data,error}=await sb.from('contatos').insert({user_id:currentUser.id,nome,tipo}).select().single();
+  const {data,error}=await sb.from('contatos').insert({user_id:currentUser.id,nome,tipo:'ambos'}).select().single();
   if(!error&&data){ cache.contatos.push(data); cache.contatos.sort((a,b)=>a.nome.localeCompare(b.nome)); document.getElementById('cad-contato').value=''; renderCadastros(); toast('Adicionado!'); }
   else { toast('Erro: '+(error?.message||'não foi possível salvar'),'var(--red)'); console.error(error); }
 }
@@ -1276,13 +1268,12 @@ async function delBanco(id){
 }
 
 function renderCadastros(){
-  const tipoLabel={cliente:'Cliente',fornecedor:'Fornecedor',ambos:'Ambos'};
   document.getElementById('tbody-subcats').innerHTML=cache.subcats.length
     ? cache.subcats.map(s=>`<tr><td>${s.sub}</td><td>${s.cat}</td><td><span class="badge ${s.tipo==='receita'?'pago':'pendente'}">${s.tipo==='receita'?'Receita':'Despesa'}</span></td><td><button class="btn-danger" onclick="delSubcat(${s.id})">✕</button></td></tr>`).join('')
     : `<tr><td colspan="4" class="empty">Nenhuma</td></tr>`;
   document.getElementById('tbody-contatos').innerHTML=cache.contatos.length
-    ? cache.contatos.map(c=>`<tr><td>${c.nome}</td><td><span class="badge azul">${tipoLabel[c.tipo]||c.tipo}</span></td><td><button class="btn-danger" onclick="delContato(${c.id})">✕</button></td></tr>`).join('')
-    : `<tr><td colspan="3" class="empty">Nenhum</td></tr>`;
+    ? cache.contatos.map(c=>`<tr><td>${c.nome}</td><td><button class="btn-danger" onclick="delContato(${c.id})">✕</button></td></tr>`).join('')
+    : `<tr><td colspan="2" class="empty">Nenhum</td></tr>`;
   document.getElementById('tbody-bancos').innerHTML=cache.bancos.length
     ? cache.bancos.map(b=>`<tr><td>${b.nome}</td><td style="font-weight:600;color:var(--gold)">${fmt(b.saldo_inicial)}</td><td><button class="btn-danger" onclick="delBanco(${b.id})">✕</button></td></tr>`).join('')
     : `<tr><td colspan="3" class="empty">Nenhum</td></tr>`;
