@@ -542,7 +542,7 @@ tbody tr:hover td{background:var(--surface-2);}
 </div>
 
 <script>
-const GESTOR_EMAIL = null; // será detectado automaticamente pela tabela gestor_clientes
+const GESTOR_EMAILS = ['leopoldobribeiro@gmail.com']; // únicos e-mails com acesso ao painel de gestor
 const SUPA_URL = 'https://ymctrfndzedoziteevlb.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltY3RyZm5kemVkb3ppdGVldmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxODUwOTAsImV4cCI6MjEwMDc2MTA5MH0.eCKttrHhEXhS0Sc41pSwT0aFOWs38AsiPCjZEozhYRk';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -607,14 +607,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
     currentUser = session.user;
     document.getElementById('login-wrap').style.display = 'none';
     showLoading(true);
-    // Verifica se é gestor (tem clientes vinculados)
-    const {data: clientes} = await sb.from('gestor_clientes').select('*').eq('gestor_id', currentUser.id).eq('ativo', true);
-    isGestor = clientes && clientes.length >= 0 && await verificarSeGestor();
-    showLoading(false);
+    isGestor = await verificarSeGestor();
     if(isGestor){
+      showLoading(false);
       mostrarPainelGestor();
     } else {
       await entrarComoUsuario(currentUser.id);
+      showLoading(false);
     }
   } else {
     currentUser = null;
@@ -624,11 +623,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
 });
 
 async function verificarSeGestor(){
-  // É gestor se tem pelo menos um registro na tabela gestor_clientes como gestor
-  const {count} = await sb.from('gestor_clientes').select('*', {count:'exact',head:true}).eq('gestor_id', currentUser.id);
-  // Também considera gestor se nunca cadastrou dados próprios (conta nova de gestor)
-  const {count: recCount} = await sb.from('receitas').select('*', {count:'exact',head:true}).eq('user_id', currentUser.id);
-  return count > 0 || recCount === 0 && count === 0;
+  // É gestor SOMENTE se o e-mail está na lista fixa de gestores
+  return GESTOR_EMAILS.includes(currentUser.email);
 }
 
 async function mostrarPainelGestor(){
