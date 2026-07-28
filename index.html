@@ -585,7 +585,8 @@ async function authAction(){
     const {data, error} = await sb.auth.signUp({email, password: senha});
     if(error){ errEl.textContent = error.message; errEl.style.display = 'block'; }
     else if(data.user){
-      await sb.from('profiles').insert({id: data.user.id, empresa});
+      const {error: profErr} = await sb.from('profiles').insert({id: data.user.id, empresa, email});
+      if(profErr) console.error('Erro ao salvar perfil:', profErr);
       errEl.style.color = 'var(--green)';
       errEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar.';
       errEl.style.display = 'block';
@@ -648,9 +649,7 @@ async function carregarClientesGestor(){
   grid.innerHTML = '';
 
   for(const v of (vinculos||[])){
-    const {data: prof} = await sb.from('profiles').select('empresa').eq('id', v.cliente_id).single();
-    const {data: user} = await sb.auth.admin?.getUserById?.(v.cliente_id) || {data:null};
-    const {count: recCount} = await sb.from('receitas').select('*',{count:'exact',head:true}).eq('user_id', v.cliente_id).eq('pago', true);
+    const {data: prof} = await sb.from('profiles').select('empresa, email').eq('id', v.cliente_id).single();
     const {count: despCount} = await sb.from('despesas').select('*',{count:'exact',head:true}).eq('user_id', v.cliente_id).eq('pago', false);
     const {data: recs} = await sb.from('receitas').select('valor').eq('user_id', v.cliente_id).eq('pago', true);
     const {data: desps} = await sb.from('despesas').select('valor').eq('user_id', v.cliente_id).eq('pago', true);
@@ -658,11 +657,15 @@ async function carregarClientesGestor(){
     const saidas = (desps||[]).reduce((s,d)=>s+Number(d.valor),0);
 
     const empresa = prof?.empresa || 'Empresa sem nome';
+    const emailCliente = prof?.email || '';
     const card = document.createElement('div');
     card.className = 'cliente-card';
     card.innerHTML = `
-      <div class="cliente-card-nome">&#x1F3E2; ${empresa}</div>
-      <div class="cliente-card-email" id="email-${v.cliente_id}">carregando...</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="cliente-card-nome" id="nome-${v.cliente_id}" style="flex:1;">&#x1F3E2; ${empresa}</div>
+        <button class="btn-dup" style="padding:3px 8px;" title="Editar nome" onclick="editarNomeEmpresa('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')" >&#x270F;</button>
+      </div>
+      <div class="cliente-card-email">${emailCliente}</div>
       <div class="cliente-card-metrics">
         <div class="cliente-metric">
           <div class="cliente-metric-label">Entradas</div>
@@ -683,7 +686,7 @@ async function carregarClientesGestor(){
       </div>
       <div class="cliente-card-footer">
         <span style="font-size:11px;color:var(--text-3)">ID: ${v.cliente_id.slice(0,8)}...</span>
-        <button class="btn-entrar" onclick="entrarComoCliente('${v.cliente_id}','${empresa}')">Entrar &#x2192;</button>
+        <button class="btn-entrar" onclick="entrarComoCliente('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')">Entrar &#x2192;</button>
       </div>
     `;
     grid.appendChild(card);
@@ -695,6 +698,15 @@ async function carregarClientesGestor(){
   addCard.onclick = abrirModalCliente;
   addCard.innerHTML = `<div class="add-cliente-icon">+</div><div class="add-cliente-text">Adicionar empresa cliente</div>`;
   grid.appendChild(addCard);
+}
+
+async function editarNomeEmpresa(clienteId, nomeAtual){
+  const novoNome = prompt('Nome da empresa:', nomeAtual);
+  if(!novoNome || !novoNome.trim() || novoNome===nomeAtual) return;
+  const {error} = await sb.from('profiles').update({empresa: novoNome.trim()}).eq('id', clienteId);
+  if(error){ toast('Erro ao salvar: '+error.message, 'var(--red)'); return; }
+  toast('Nome atualizado!');
+  await carregarClientesGestor();
 }
 
 async function entrarComoCliente(clienteId, empresa){
