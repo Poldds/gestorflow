@@ -1224,6 +1224,7 @@ async function addSubcat(){
   if(!sub||!cat){toast('Preencha os campos','var(--red)');return;}
   const {data,error}=await sb.from('subcats').insert({user_id:currentUser.id,sub,cat,tipo}).select().single();
   if(!error&&data){ cache.subcats.push(data); document.getElementById('cad-subcat').value=''; document.getElementById('cad-cat').value=''; renderCadastros(); toast('Adicionada!'); }
+  else { toast('Erro: '+(error?.message||'não foi possível salvar'),'var(--red)'); console.error(error); }
 }
 
 async function delSubcat(id){
@@ -1238,6 +1239,7 @@ async function addContato(){
   if(!nome){toast('Informe o nome','var(--red)');return;}
   const {data,error}=await sb.from('contatos').insert({user_id:currentUser.id,nome,tipo}).select().single();
   if(!error&&data){ cache.contatos.push(data); cache.contatos.sort((a,b)=>a.nome.localeCompare(b.nome)); document.getElementById('cad-contato').value=''; renderCadastros(); toast('Adicionado!'); }
+  else { toast('Erro: '+(error?.message||'não foi possível salvar'),'var(--red)'); console.error(error); }
 }
 
 async function delContato(id){
@@ -1252,6 +1254,7 @@ async function addBanco(){
   if(!nome){toast('Informe o nome','var(--red)');return;}
   const {data,error}=await sb.from('bancos').insert({user_id:currentUser.id,nome,saldo_inicial}).select().single();
   if(!error&&data){ cache.bancos.push(data); document.getElementById('cad-banco').value=''; document.getElementById('cad-banco-saldo').value=''; renderCadastros(); toast('Adicionado!'); }
+  else { toast('Erro: '+(error?.message||'não foi possível salvar'),'var(--red)'); console.error(error); }
 }
 
 async function delBanco(id){
