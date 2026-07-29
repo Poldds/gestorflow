@@ -671,6 +671,7 @@ async function verificarSeGestor(){
 }
 
 async function mostrarPainelGestor(){
+  aplicarTema(null); // painel do gestor sempre usa as cores padrão do GestorFlow, nunca a de um cliente
   document.getElementById('app').classList.remove('show');
   document.getElementById('gestor-panel').classList.add('show');
   document.getElementById('gestor-email').textContent = currentUser.email;
