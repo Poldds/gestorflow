@@ -622,11 +622,13 @@ async function authAction(){
     if(error){ errEl.textContent = 'E-mail ou senha incorretos.'; errEl.style.display = 'block'; }
   } else {
     const empresa = document.getElementById('inp-empresa').value.trim() || 'Minha Empresa';
-    const {data, error} = await sb.auth.signUp({email, password: senha});
+    const {data, error} = await sb.auth.signUp({email, password: senha, options: {data: {empresa}}});
     if(error){ errEl.textContent = error.message; errEl.style.display = 'block'; }
     else if(data.user){
-      const {error: profErr} = await sb.from('profiles').insert({id: data.user.id, empresa, email});
-      if(profErr) console.error('Erro ao salvar perfil:', profErr);
+      // O perfil agora é criado automaticamente por um gatilho no banco (trigger_novo_usuario).
+      // Este insert aqui é só um reforço/fallback, caso o gatilho ainda não tenha sido configurado.
+      const {error: profErr} = await sb.from('profiles').upsert({id: data.user.id, empresa, email}, {onConflict:'id', ignoreDuplicates:true});
+      if(profErr) console.error('Erro ao salvar perfil (fallback):', profErr);
       errEl.style.color = 'var(--green)';
       errEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar.';
       errEl.style.display = 'block';
@@ -793,7 +795,7 @@ async function entrarComoUsuario(userId, empresaOverride){
   }
   showLoading(true);
   const {data: prof, error: profError} = await sb.from('profiles').select('empresa, cor_primaria, cor_secundaria, logo_base64, mostrar_marca').eq('id', userId).single();
-  if(profError) console.error('Erro ao carregar perfil/aparência:', profError);
+  if(profError){ console.error('Erro ao carregar perfil/aparência:', profError); toast('Aviso: personalização não carregou ('+profError.message+')','var(--red)'); }
   const nomeEmpresa = empresaOverride || prof?.empresa || '';
   cache.perfilAtual = prof || {};
   aplicarTema(prof);
