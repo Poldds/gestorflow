@@ -792,7 +792,8 @@ async function entrarComoUsuario(userId, empresaOverride){
     document.getElementById('context-bar').classList.remove('show');
   }
   showLoading(true);
-  const {data: prof} = await sb.from('profiles').select('empresa, cor_primaria, cor_secundaria, logo_base64, mostrar_marca').eq('id', userId).single();
+  const {data: prof, error: profError} = await sb.from('profiles').select('empresa, cor_primaria, cor_secundaria, logo_base64, mostrar_marca').eq('id', userId).single();
+  if(profError) console.error('Erro ao carregar perfil/aparência:', profError);
   const nomeEmpresa = empresaOverride || prof?.empresa || '';
   cache.perfilAtual = prof || {};
   aplicarTema(prof);
