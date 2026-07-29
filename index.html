@@ -533,6 +533,11 @@ tbody tr:hover td{background:var(--surface-2);}
           </div>
 
           <div class="form-group" style="margin-bottom:16px">
+            <label>Nome da empresa</label>
+            <input type="text" id="ap-nome-empresa" placeholder="Ex: Restaurante do João"/>
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px">
             <label>O que exibir no menu lateral</label>
             <select id="ap-mostrar-marca" onchange="toggleUploadLogo()">
               <option value="nome">Nome da empresa</option>
@@ -674,16 +679,27 @@ async function mostrarPainelGestor(){
   await carregarClientesGestor();
 }
 
+let clientesRenderToken = 0;
+
 async function carregarClientesGestor(){
+  const meuToken = ++clientesRenderToken;
   const {data: vinculos} = await sb.from('gestor_clientes')
     .select('cliente_id, ativo')
     .eq('gestor_id', currentUser.id)
     .eq('ativo', true);
 
-  const grid = document.getElementById('clientes-grid');
-  grid.innerHTML = '';
-
+  // Remove vínculos duplicados para o mesmo cliente (mantém só um)
+  const vinculosUnicos = [];
+  const idsVistos = new Set();
   for(const v of (vinculos||[])){
+    if(!idsVistos.has(v.cliente_id)){
+      idsVistos.add(v.cliente_id);
+      vinculosUnicos.push(v);
+    }
+  }
+
+  const cardsHtml = [];
+  for(const v of vinculosUnicos){
     const {data: prof} = await sb.from('profiles').select('empresa, email').eq('id', v.cliente_id).single();
     const {count: despCount} = await sb.from('despesas').select('*',{count:'exact',head:true}).eq('user_id', v.cliente_id).eq('pago', false);
     const {data: recs} = await sb.from('receitas').select('valor').eq('user_id', v.cliente_id).eq('pago', true);
@@ -693,39 +709,47 @@ async function carregarClientesGestor(){
 
     const empresa = prof?.empresa || 'Empresa sem nome';
     const emailCliente = prof?.email || '';
-    const card = document.createElement('div');
-    card.className = 'cliente-card';
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;">
-        <div class="cliente-card-nome" id="nome-${v.cliente_id}" style="flex:1;">&#x1F3E2; ${empresa}</div>
-        <button class="btn-dup" style="padding:3px 8px;" title="Editar nome" onclick="editarNomeEmpresa('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')" >&#x270F;</button>
+
+    // Se outra chamada mais recente já começou, esta é descartada
+    if(meuToken !== clientesRenderToken) return;
+
+    cardsHtml.push(`
+      <div class="cliente-card">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="cliente-card-nome" style="flex:1;">&#x1F3E2; ${empresa}</div>
+          <button class="btn-dup" style="padding:3px 8px;" title="Editar nome" onclick="editarNomeEmpresa('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')" >&#x270F;</button>
+        </div>
+        <div class="cliente-card-email">${emailCliente}</div>
+        <div class="cliente-card-metrics">
+          <div class="cliente-metric">
+            <div class="cliente-metric-label">Entradas</div>
+            <div class="cliente-metric-value green">${fmt(entradas)}</div>
+          </div>
+          <div class="cliente-metric">
+            <div class="cliente-metric-label">Saídas</div>
+            <div class="cliente-metric-value red">${fmt(saidas)}</div>
+          </div>
+          <div class="cliente-metric">
+            <div class="cliente-metric-label">Saldo</div>
+            <div class="cliente-metric-value ${entradas-saidas>=0?'green':'red'}">${fmt(entradas-saidas)}</div>
+          </div>
+          <div class="cliente-metric">
+            <div class="cliente-metric-label">Boletos pend.</div>
+            <div class="cliente-metric-value orange">${despCount||0}</div>
+          </div>
+        </div>
+        <div class="cliente-card-footer">
+          <span style="font-size:11px;color:var(--text-3)">ID: ${v.cliente_id.slice(0,8)}...</span>
+          <button class="btn-entrar" onclick="entrarComoCliente('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')">Entrar &#x2192;</button>
+        </div>
       </div>
-      <div class="cliente-card-email">${emailCliente}</div>
-      <div class="cliente-card-metrics">
-        <div class="cliente-metric">
-          <div class="cliente-metric-label">Entradas</div>
-          <div class="cliente-metric-value green">${fmt(entradas)}</div>
-        </div>
-        <div class="cliente-metric">
-          <div class="cliente-metric-label">Saídas</div>
-          <div class="cliente-metric-value red">${fmt(saidas)}</div>
-        </div>
-        <div class="cliente-metric">
-          <div class="cliente-metric-label">Saldo</div>
-          <div class="cliente-metric-value ${entradas-saidas>=0?'green':'red'}">${fmt(entradas-saidas)}</div>
-        </div>
-        <div class="cliente-metric">
-          <div class="cliente-metric-label">Boletos pend.</div>
-          <div class="cliente-metric-value orange">${despCount||0}</div>
-        </div>
-      </div>
-      <div class="cliente-card-footer">
-        <span style="font-size:11px;color:var(--text-3)">ID: ${v.cliente_id.slice(0,8)}...</span>
-        <button class="btn-entrar" onclick="entrarComoCliente('${v.cliente_id}','${empresa.replace(/'/g,"\\'")}')">Entrar &#x2192;</button>
-      </div>
-    `;
-    grid.appendChild(card);
+    `);
   }
+
+  // Só escreve na tela se ninguém mais recente já assumiu
+  if(meuToken !== clientesRenderToken) return;
+  const grid = document.getElementById('clientes-grid');
+  grid.innerHTML = cardsHtml.join('');
 
   // Botão adicionar sempre no final
   const addCard = document.createElement('div');
@@ -1357,6 +1381,7 @@ let logoBase64Temp = null;
 
 function renderAparencia(){
   const prof = cache.perfilAtual || {};
+  document.getElementById('ap-nome-empresa').value = prof.empresa || '';
   document.getElementById('ap-cor-primaria').value = prof.cor_primaria || '#C9A84C';
   document.getElementById('ap-cor-secundaria').value = prof.cor_secundaria || '#1A1A2E';
   document.getElementById('ap-mostrar-marca').value = prof.mostrar_marca || 'nome';
@@ -1387,10 +1412,11 @@ function previewLogo(e){
 }
 
 async function salvarAparencia(){
+  const empresa = document.getElementById('ap-nome-empresa').value.trim();
   const cor_primaria = document.getElementById('ap-cor-primaria').value;
   const cor_secundaria = document.getElementById('ap-cor-secundaria').value;
   const mostrar_marca = document.getElementById('ap-mostrar-marca').value;
-  const update = {cor_primaria, cor_secundaria, mostrar_marca};
+  const update = {empresa, cor_primaria, cor_secundaria, mostrar_marca};
   if(mostrar_marca === 'logo' && logoBase64Temp){ update.logo_base64 = logoBase64Temp; }
 
   const {error} = await sb.from('profiles').update(update).eq('id', usuarioAtivoId);
@@ -1398,9 +1424,7 @@ async function salvarAparencia(){
 
   cache.perfilAtual = {...cache.perfilAtual, ...update};
   aplicarTema(cache.perfilAtual);
-  const nomeEmpresa = document.getElementById('sidebar-empresa').textContent || '';
-  const {data: prof} = await sb.from('profiles').select('empresa').eq('id', usuarioAtivoId).single();
-  aplicarMarcaSidebar(cache.perfilAtual, prof?.empresa || '');
+  aplicarMarcaSidebar(cache.perfilAtual, empresa);
   toast('Aparência salva com sucesso!');
 }
 
