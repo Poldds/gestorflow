@@ -278,6 +278,7 @@ tbody tr:hover td{background:var(--surface-2);}
       <div class="nav-group">Gestão</div>
       <div class="nav-item" onclick="showTab('boletos',this)"><span class="nav-icon">&#x1F4CB;</span> Boletos</div>
       <div class="nav-item" onclick="showTab('cadastros',this)"><span class="nav-icon">&#x2699;</span> Cadastros</div>
+      <div class="nav-item" onclick="showTab('aparencia',this)"><span class="nav-icon">&#x1F3A8;</span> Aparência</div>
     </div>
     <div class="sidebar-footer">
       <div id="sidebar-email" style="margin-bottom:6px;word-break:break-all;"></div>
@@ -514,6 +515,47 @@ tbody tr:hover td{background:var(--surface-2);}
         </div>
       </div>
 
+      <!-- APARÊNCIA -->
+      <div class="section" id="tab-aparencia">
+        <div class="card" style="max-width:520px">
+          <div class="card-title">&#x1F3A8; Personalização visual</div>
+          <p class="tip">Escolha as cores e a logo que aparecem no seu sistema. Só você vê essas mudanças na sua conta.</p>
+
+          <div class="form-row" style="margin-bottom:16px">
+            <div class="form-group">
+              <label>Cor primária (destaques, botões)</label>
+              <input type="color" id="ap-cor-primaria" style="height:38px;padding:2px;"/>
+            </div>
+            <div class="form-group">
+              <label>Cor secundária (menu lateral)</label>
+              <input type="color" id="ap-cor-secundaria" style="height:38px;padding:2px;"/>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px">
+            <label>O que exibir no menu lateral</label>
+            <select id="ap-mostrar-marca" onchange="toggleUploadLogo()">
+              <option value="nome">Nome da empresa</option>
+              <option value="logo">Logo (enviar imagem)</option>
+              <option value="nenhum">Não exibir nada</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="ap-upload-box" style="display:none;margin-bottom:16px">
+            <label>Logo da empresa (PNG, fundo transparente recomendado)</label>
+            <input type="file" id="ap-logo-input" accept="image/png,image/jpeg" onchange="previewLogo(event)"/>
+            <div id="ap-logo-preview" style="margin-top:10px;display:none;">
+              <img id="ap-logo-preview-img" style="max-width:120px;max-height:60px;object-fit:contain;background:var(--dark-2);padding:8px;border-radius:6px;"/>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-primary" onclick="salvarAparencia()">Salvar aparência</button>
+            <button class="btn-secondary" onclick="resetarAparencia()">Restaurar padrão</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -709,7 +751,10 @@ async function entrarComoCliente(clienteId, empresa){
   showLoading(false);
 }
 
+let usuarioAtivoId = null; // id do perfil sendo exibido (próprio ou cliente, quando gestor)
+
 async function entrarComoUsuario(userId, empresaOverride){
+  usuarioAtivoId = userId;
   const now = new Date();
   document.getElementById('topbar-date').textContent = now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('gestor-panel').classList.remove('show');
@@ -723,14 +768,40 @@ async function entrarComoUsuario(userId, empresaOverride){
     document.getElementById('context-bar').classList.remove('show');
   }
   showLoading(true);
-  const {data: prof} = await sb.from('profiles').select('empresa').eq('id', userId).single();
+  const {data: prof} = await sb.from('profiles').select('empresa, cor_primaria, cor_secundaria, logo_base64, mostrar_marca').eq('id', userId).single();
   const nomeEmpresa = empresaOverride || prof?.empresa || '';
-  if(nomeEmpresa) document.getElementById('sidebar-empresa').innerHTML = `<span style="color:rgba(255,255,255,0.5);font-size:11px">${nomeEmpresa}</span>`;
+  cache.perfilAtual = prof || {};
+  aplicarTema(prof);
+  aplicarMarcaSidebar(prof, nomeEmpresa);
   // Carrega dados do userId correto (cliente ou próprio)
   await carregarDadosDeUsuario(userId);
   showLoading(false);
   renderDashboard();
   renderBoletos();
+}
+
+function aplicarTema(prof){
+  const root = document.documentElement.style;
+  const primaria = prof?.cor_primaria || '#C9A84C';
+  const secundaria = prof?.cor_secundaria || '#1A1A2E';
+  root.setProperty('--gold', primaria);
+  root.setProperty('--gold-dim', primaria);
+  root.setProperty('--gold-light', primaria);
+  root.setProperty('--dark-2', secundaria);
+  root.setProperty('--dark', secundaria);
+  root.setProperty('--dark-3', secundaria);
+}
+
+function aplicarMarcaSidebar(prof, nomeEmpresa){
+  const el = document.getElementById('sidebar-empresa');
+  const modo = prof?.mostrar_marca || 'nome';
+  if(modo === 'logo' && prof?.logo_base64){
+    el.innerHTML = `<img src="${prof.logo_base64}" style="max-width:140px;max-height:50px;object-fit:contain;margin-top:6px;" alt="Logo da empresa"/>`;
+  } else if(modo === 'nenhum'){
+    el.innerHTML = '';
+  } else {
+    el.innerHTML = nomeEmpresa ? `<span style="color:rgba(255,255,255,0.5);font-size:11px">${nomeEmpresa}</span>` : '';
+  }
 }
 
 async function voltarPainelGestor(){
@@ -852,7 +923,7 @@ async function inserirDefaultsBancos(){
 }
 
 // ---- UI ----
-const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros'};
+const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros',aparencia:'Aparência'};
 
 function showTab(t, el){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -866,6 +937,7 @@ function showTab(t, el){
   if(t==='movimentacao'){populateSelects();renderMov();}
   if(t==='boletos') renderBoletos();
   if(t==='cadastros') renderCadastros();
+  if(t==='aparencia') renderAparencia();
 }
 
 function toast(msg, color){
@@ -1280,7 +1352,70 @@ function renderCadastros(){
   populateSelects();
 }
 
-// ---- DASHBOARD ----
+// ---- APARÊNCIA ----
+let logoBase64Temp = null;
+
+function renderAparencia(){
+  const prof = cache.perfilAtual || {};
+  document.getElementById('ap-cor-primaria').value = prof.cor_primaria || '#C9A84C';
+  document.getElementById('ap-cor-secundaria').value = prof.cor_secundaria || '#1A1A2E';
+  document.getElementById('ap-mostrar-marca').value = prof.mostrar_marca || 'nome';
+  logoBase64Temp = prof.logo_base64 || null;
+  toggleUploadLogo();
+  const previewImg = document.getElementById('ap-logo-preview-img');
+  const previewBox = document.getElementById('ap-logo-preview');
+  if(logoBase64Temp){ previewImg.src = logoBase64Temp; previewBox.style.display='block'; }
+  else { previewBox.style.display='none'; }
+}
+
+function toggleUploadLogo(){
+  const modo = document.getElementById('ap-mostrar-marca').value;
+  document.getElementById('ap-upload-box').style.display = modo==='logo' ? 'block' : 'none';
+}
+
+function previewLogo(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 1.5*1024*1024){ toast('Imagem muito grande — use até 1,5MB','var(--red)'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    logoBase64Temp = ev.target.result;
+    document.getElementById('ap-logo-preview-img').src = logoBase64Temp;
+    document.getElementById('ap-logo-preview').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function salvarAparencia(){
+  const cor_primaria = document.getElementById('ap-cor-primaria').value;
+  const cor_secundaria = document.getElementById('ap-cor-secundaria').value;
+  const mostrar_marca = document.getElementById('ap-mostrar-marca').value;
+  const update = {cor_primaria, cor_secundaria, mostrar_marca};
+  if(mostrar_marca === 'logo' && logoBase64Temp){ update.logo_base64 = logoBase64Temp; }
+
+  const {error} = await sb.from('profiles').update(update).eq('id', usuarioAtivoId);
+  if(error){ toast('Erro ao salvar: '+error.message,'var(--red)'); return; }
+
+  cache.perfilAtual = {...cache.perfilAtual, ...update};
+  aplicarTema(cache.perfilAtual);
+  const nomeEmpresa = document.getElementById('sidebar-empresa').textContent || '';
+  const {data: prof} = await sb.from('profiles').select('empresa').eq('id', usuarioAtivoId).single();
+  aplicarMarcaSidebar(cache.perfilAtual, prof?.empresa || '');
+  toast('Aparência salva com sucesso!');
+}
+
+async function resetarAparencia(){
+  if(!confirm('Restaurar as cores padrão do GestorFlow?')) return;
+  const update = {cor_primaria:'#C9A84C', cor_secundaria:'#1A1A2E', mostrar_marca:'nome', logo_base64:null};
+  const {error} = await sb.from('profiles').update(update).eq('id', usuarioAtivoId);
+  if(error){ toast('Erro ao salvar: '+error.message,'var(--red)'); return; }
+  cache.perfilAtual = {...cache.perfilAtual, ...update};
+  aplicarTema(cache.perfilAtual);
+  const {data: prof} = await sb.from('profiles').select('empresa').eq('id', usuarioAtivoId).single();
+  aplicarMarcaSidebar(cache.perfilAtual, prof?.empresa || '');
+  renderAparencia();
+  toast('Aparência restaurada!');
+}
 let chartF=null,chartC=null;
 function renderDashboard(){
   const entradas=cache.receitas.filter(r=>r.pago).reduce((s,r)=>s+Number(r.valor),0);
