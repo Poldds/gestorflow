@@ -308,6 +308,10 @@ tbody tr:hover td{background:var(--surface-2);}
           <div class="metric"><div class="metric-icon">&#x1F52E;</div><div class="metric-label">Projeção futura</div><div class="metric-value" id="m-projecao">R$ 0,00</div></div>
         </div>
         <div class="card">
+          <div class="card-title">&#x1F3E6; Saldo por banco</div>
+          <div class="saldo-grid" id="dash-saldo-bancos"></div>
+        </div>
+        <div class="card">
           <div class="card-title">&#x1F4C8; Fluxo de caixa — mês atual</div>
           <div style="position:relative;height:220px;width:100%"><canvas id="chartFluxo"></canvas></div>
         </div>
@@ -1279,6 +1283,22 @@ function dupMov(id){
   toast('Copiado — edite e salve!','var(--gold-dim)');
 }
 
+function calcularSaldosBancos(){
+  const saldos={};
+  cache.bancos.forEach(b=>{saldos[b.nome]=Number(b.saldo_inicial)||0;});
+  cache.receitas.filter(r=>r.pago).forEach(r=>{saldos[r.banco]=(saldos[r.banco]||0)+Number(r.valor);});
+  cache.despesas.filter(d=>d.pago).forEach(d=>{saldos[d.banco]=(saldos[d.banco]||0)-Number(d.valor);});
+  cache.movimentacoes.forEach(m=>{saldos[m.banco_origem]=(saldos[m.banco_origem]||0)-Number(m.valor);saldos[m.banco_destino]=(saldos[m.banco_destino]||0)+Number(m.valor);});
+  return saldos;
+}
+
+function renderSaldoBancos(elId){
+  const saldos = calcularSaldosBancos();
+  document.getElementById(elId).innerHTML=Object.entries(saldos).map(([b,s])=>
+    `<div class="saldo-card"><div class="sc-label">${b}</div><div class="sc-value ${s>=0?'green':'red'}">${fmt(s)}</div></div>`
+  ).join('')||'<span style="color:var(--text-3)">Nenhum banco cadastrado</span>';
+}
+
 function renderMov(){
   const tbody=document.getElementById('tbody-mov');
   tbody.innerHTML=cache.movimentacoes.length
@@ -1294,14 +1314,7 @@ function renderMov(){
       </tr>`).join('')
     : `<tr><td colspan="6" class="empty">Nenhuma transferência</td></tr>`;
 
-  const saldos={};
-  cache.bancos.forEach(b=>{saldos[b.nome]=Number(b.saldo_inicial)||0;});
-  cache.receitas.filter(r=>r.pago).forEach(r=>{saldos[r.banco]=(saldos[r.banco]||0)+Number(r.valor);});
-  cache.despesas.filter(d=>d.pago).forEach(d=>{saldos[d.banco]=(saldos[d.banco]||0)-Number(d.valor);});
-  cache.movimentacoes.forEach(m=>{saldos[m.banco_origem]=(saldos[m.banco_origem]||0)-Number(m.valor);saldos[m.banco_destino]=(saldos[m.banco_destino]||0)+Number(m.valor);});
-  document.getElementById('saldo-bancos').innerHTML=Object.entries(saldos).map(([b,s])=>
-    `<div class="saldo-card"><div class="sc-label">${b}</div><div class="sc-value ${s>=0?'green':'red'}">${fmt(s)}</div></div>`
-  ).join('')||'<span style="color:var(--text-3)">Nenhum banco cadastrado</span>';
+  renderSaldoBancos('saldo-bancos');
 }
 
 // ---- BOLETOS ----
@@ -1454,6 +1467,8 @@ function renderDashboard(){
   document.getElementById('m-saldo').textContent=fmt(entradas-saidas);
   const pEl=document.getElementById('m-projecao');
   pEl.textContent=fmt(proj);pEl.style.color=proj>=0?'var(--green)':'var(--red)';
+
+  renderSaldoBancos('dash-saldo-bancos');
 
   const mes=new Date().toISOString().slice(0,7);
   const sems=[{l:'Sem 1',min:mes+'-01',max:mes+'-07'},{l:'Sem 2',min:mes+'-08',max:mes+'-14'},{l:'Sem 3',min:mes+'-15',max:mes+'-21'},{l:'Sem 4',min:mes+'-22',max:mes+'-31'}];
