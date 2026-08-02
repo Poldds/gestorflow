@@ -277,8 +277,11 @@ tbody tr:hover td{background:var(--surface-2);}
       <div class="nav-item" onclick="showTab('movimentacao',this)"><span class="nav-icon">&#x21C4;</span> Movimentação</div>
       <div class="nav-group">Gestão</div>
       <div class="nav-item" onclick="showTab('boletos',this)"><span class="nav-icon">&#x1F4CB;</span> Boletos</div>
+      <div class="nav-item" onclick="showTab('checklist',this)"><span class="nav-icon">&#x2705;</span> Checklist</div>
       <div class="nav-item" onclick="showTab('cadastros',this)"><span class="nav-icon">&#x2699;</span> Cadastros</div>
       <div class="nav-item" onclick="showTab('aparencia',this)"><span class="nav-icon">&#x1F3A8;</span> Aparência</div>
+      <div class="nav-group">Conta</div>
+      <div class="nav-item" onclick="showTab('configuracoes',this)"><span class="nav-icon">&#x1F464;</span> Configurações</div>
     </div>
     <div class="sidebar-footer">
       <div id="sidebar-email" style="margin-bottom:6px;word-break:break-all;"></div>
@@ -370,6 +373,19 @@ tbody tr:hover td{background:var(--surface-2);}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
             <div class="card-title" style="margin:0">&#x2212; Lançar despesa</div>
             <span class="dup-badge" id="badge-d">&#x270F; Duplicando — edite e salve</span>
+          </div>
+          <div class="rec-box" style="background:#EFF6FF;border-color:#BFDBFE;">
+            <div class="rec-box-title" style="color:#1D4ED8;">&#x1F4F7; Leitura de boleto (código de barras)</div>
+            <div class="form-row-inline">
+              <div class="form-group" style="flex:2;">
+                <label>Aponte o leitor USB aqui e escaneie</label>
+                <input type="text" id="d-barcode" placeholder="Aguardando leitura..." autocomplete="off" onkeydown="handleBarcodeKey(event)"/>
+              </div>
+              <div style="padding-top:18px">
+                <button class="btn-sm" onclick="lerBarcodeManual()">Processar</button>
+              </div>
+            </div>
+            <div class="tip" style="margin:8px 0 0;">Funciona com boletos bancários (a data de vencimento e o valor vêm do próprio código). Não funciona com código de barras de produto.</div>
           </div>
           <div class="form-section"><div class="form-row">
             <div class="form-group"><label>Competência</label><input type="date" id="d-comp"/></div>
@@ -565,6 +581,84 @@ tbody tr:hover td{background:var(--surface-2);}
         </div>
       </div>
 
+      <!-- CHECKLIST -->
+      <div class="section" id="tab-checklist">
+        <div class="card">
+          <div class="card-title">&#x2705; Nova tarefa</div>
+          <div class="form-section"><div class="form-row">
+            <div class="form-group"><label>Data</label><input type="date" id="ck-data"/></div>
+            <div class="form-group" style="flex:2"><label>Tarefa</label><input type="text" id="ck-titulo" placeholder="Ex: Conferir temperatura da geladeira" onkeydown="if(event.key==='Enter') addChecklistItem()"/></div>
+          </div></div>
+          <div class="btn-row">
+            <button class="btn-primary" onclick="addChecklistItem()">+ Adicionar tarefa</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">&#x1F4CB; Tarefas</div>
+          <div class="filter-bar">
+            <select id="ck-filtro-data" onchange="renderChecklist()"><option value="">Todas as datas</option></select>
+            <span class="total-label" id="ck-total-label"></span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th style="width:95px">Data</th><th>Tarefa</th><th style="width:80px">Feito?</th>
+              <th>Observação</th><th>Motivo (se não feito)</th><th style="width:50px"></th>
+            </tr></thead>
+            <tbody id="tbody-checklist"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- CONFIGURAÇÕES -->
+      <div class="section" id="tab-configuracoes">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">&#x1F464; Perfil</div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>E-mail da conta</label>
+                <input type="text" id="cfg-email" readonly/>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>Nome da empresa</label>
+                <input type="text" id="cfg-nome-empresa" placeholder="Ex: Restaurante do João"/>
+              </div>
+              <div class="btn-row"><button class="btn-primary" onclick="salvarPerfilConfig()">Salvar perfil</button></div>
+              <p class="tip" style="margin-top:14px">Quer mudar cores e logo? Isso fica na aba <strong>Aparência</strong>.</p>
+            </div>
+
+            <div class="card">
+              <div class="card-title">&#x1F511; Alterar senha</div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>Nova senha</label>
+                <input type="password" id="cfg-nova-senha" placeholder="Mínimo 6 caracteres"/>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>Confirmar nova senha</label>
+                <input type="password" id="cfg-confirma-senha" placeholder="Repita a nova senha"/>
+              </div>
+              <div id="cfg-senha-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:8px;"></div>
+              <div class="btn-row"><button class="btn-primary" onclick="alterarSenha()">Atualizar senha</button></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-title">&#x1F4CA; Plano atual</div>
+              <div class="badge pago" style="font-size:13px;padding:6px 14px;margin-bottom:10px;display:inline-block;">Teste gratuito</div>
+              <p class="tip">Você está no período de testes do GestorFlow. A cobrança por assinatura ainda não está ativa.</p>
+              <div class="btn-row"><button class="btn-secondary" disabled style="opacity:.5;cursor:not-allowed;">Fazer upgrade (em breve)</button></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">&#x1F465; Usuários e permissões</div>
+              <p class="tip">Em breve você poderá convidar funcionários e contadores com acesso configurável a este sistema (o que cada um pode ver e editar).</p>
+              <div class="btn-row"><button class="btn-secondary" disabled style="opacity:.5;cursor:not-allowed;">Convidar usuário (em breve)</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -596,7 +690,7 @@ const today = () => new Date().toISOString().split('T')[0];
 let currentUser = null;
 let isGestor = false;
 let clienteAtivo = null; // {id, empresa, email} — cliente que gestor está visualizando
-let cache = {receitas:[],despesas:[],movimentacoes:[],subcats:[],contatos:[],bancos:[]};
+let cache = {receitas:[],despesas:[],movimentacoes:[],subcats:[],contatos:[],bancos:[],checklist:[]};
 
 // ---- AUTH ----
 let modoLogin = true;
@@ -889,17 +983,19 @@ async function carregarTudo(){
 }
 
 async function carregarDadosDeUsuario(uid){
-  const [r, d, m, sc, ct, bk] = await Promise.all([
+  const [r, d, m, sc, ct, bk, ck] = await Promise.all([
     sb.from('receitas').select('*').eq('user_id', uid).order('data', {ascending:false}),
     sb.from('despesas').select('*').eq('user_id', uid).order('data', {ascending:false}),
     sb.from('movimentacoes').select('*').eq('user_id', uid).order('data', {ascending:false}),
     sb.from('subcats').select('*').eq('user_id', uid).order('id'),
     sb.from('contatos').select('*').eq('user_id', uid).order('nome'),
     sb.from('bancos').select('*').eq('user_id', uid).order('nome'),
+    sb.from('checklist_itens').select('*').eq('user_id', uid).order('data', {ascending:false}),
   ]);
   cache.receitas = r.data || [];
   cache.despesas = d.data || [];
   cache.movimentacoes = m.data || [];
+  cache.checklist = ck.data || [];
   // Se for gestor vendo cliente, não cria defaults automaticamente
   const ehProprioUsuario = uid === currentUser.id;
   cache.subcats = sc.data?.length ? sc.data : (ehProprioUsuario ? await inserirDefaultsSubcats() : []);
@@ -955,7 +1051,7 @@ async function inserirDefaultsBancos(){
 }
 
 // ---- UI ----
-const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros',aparencia:'Aparência'};
+const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros',aparencia:'Aparência',checklist:'Checklist',configuracoes:'Configurações'};
 
 function showTab(t, el){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -965,11 +1061,13 @@ function showTab(t, el){
   document.getElementById('topbar-title').textContent = TITLES[t]||t;
   if(t==='dashboard') renderDashboard();
   if(t==='receitas'){populateSelects();populateFiltroMes();renderReceitas();}
-  if(t==='despesas'){populateSelects();renderDespesas();}
+  if(t==='despesas'){populateSelects();renderDespesas();setTimeout(()=>document.getElementById('d-barcode')?.focus(),100);}
   if(t==='movimentacao'){populateSelects();renderMov();}
   if(t==='boletos') renderBoletos();
   if(t==='cadastros') renderCadastros();
   if(t==='aparencia') renderAparencia();
+  if(t==='checklist'){populateFiltroChecklistData();renderChecklist();}
+  if(t==='configuracoes') renderConfiguracoes();
 }
 
 function toast(msg, color){
@@ -1178,6 +1276,58 @@ function renderReceitas(){
 }
 
 // ---- DESPESAS ----
+// ---- LEITURA DE BOLETO (CÓDIGO DE BARRAS) ----
+function handleBarcodeKey(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    processarBarcode();
+  }
+}
+
+function lerBarcodeManual(){
+  processarBarcode();
+}
+
+function processarBarcode(){
+  const raw = document.getElementById('d-barcode').value.replace(/\D/g,''); // só dígitos
+  if(raw.length !== 44){
+    toast('Código inválido — precisa ter 44 dígitos (boleto bancário)','var(--red)');
+    return;
+  }
+
+  const fator = parseInt(raw.slice(5,9), 10);
+  const valorCentavos = parseInt(raw.slice(9,19), 10);
+  const valor = valorCentavos / 100;
+
+  let vencimento = null;
+  if(fator > 0){
+    // Regra Febraban: até 21/02/2025 usava base 07/10/1997.
+    // A partir de 22/02/2025, fator reinicia em 1000 com nova base 22/02/2025.
+    if(fator >= 1000){
+      const baseNova = new Date('2025-02-22T12:00:00');
+      baseNova.setDate(baseNova.getDate() + (fator - 1000));
+      vencimento = baseNova;
+    } else {
+      const baseAntiga = new Date('1997-10-07T12:00:00');
+      baseAntiga.setDate(baseAntiga.getDate() + fator);
+      vencimento = baseAntiga;
+    }
+  }
+
+  if(vencimento){
+    document.getElementById('d-data').value = vencimento.toISOString().split('T')[0];
+  }
+  if(valor > 0){
+    document.getElementById('d-valor').value = valor.toFixed(2);
+  }
+  document.getElementById('d-comp').value = today();
+  document.getElementById('d-doc').value = raw.slice(0,3) + '...' + raw.slice(-6);
+  document.getElementById('d-barcode').value = '';
+
+  toast(`Lido! Venc: ${vencimento?vencimento.toLocaleDateString('pt-BR'):'—'} · Valor: ${fmt(valor)}`);
+  document.getElementById('d-desc').focus();
+}
+
 async function addDespesa(){
   const v=parseFloat(document.getElementById('d-valor').value);
   if(!v){toast('Informe um valor','var(--red)');return;}
@@ -1391,6 +1541,110 @@ function renderCadastros(){
     ? cache.bancos.map(b=>`<tr><td>${b.nome}</td><td style="font-weight:600;color:var(--gold)">${fmt(b.saldo_inicial)}</td><td><button class="btn-danger" onclick="delBanco(${b.id})">✕</button></td></tr>`).join('')
     : `<tr><td colspan="3" class="empty">Nenhum</td></tr>`;
   populateSelects();
+}
+
+// ---- CHECKLIST ----
+async function addChecklistItem(){
+  const titulo = document.getElementById('ck-titulo').value.trim();
+  const data = document.getElementById('ck-data').value || today();
+  if(!titulo){ toast('Digite a tarefa','var(--red)'); return; }
+  const {data: novo, error} = await sb.from('checklist_itens').insert({
+    user_id: usuarioAtivoId, titulo, data, concluido: false, observacao: '', motivo: ''
+  }).select().single();
+  if(error){ toast('Erro: '+error.message,'var(--red)'); return; }
+  cache.checklist.unshift(novo);
+  document.getElementById('ck-titulo').value = '';
+  populateFiltroChecklistData();
+  renderChecklist();
+  toast('Tarefa adicionada!');
+}
+
+async function toggleChecklistItem(id, checked){
+  const {error} = await sb.from('checklist_itens').update({concluido: checked}).eq('id', id);
+  if(error){ toast('Erro: '+error.message,'var(--red)'); return; }
+  const item = cache.checklist.find(c=>c.id===id);
+  if(item) item.concluido = checked;
+  renderChecklist();
+}
+
+async function salvarObsChecklist(id, campo, valor){
+  const update = {}; update[campo] = valor;
+  const {error} = await sb.from('checklist_itens').update(update).eq('id', id);
+  if(error){ toast('Erro ao salvar: '+error.message,'var(--red)'); return; }
+  const item = cache.checklist.find(c=>c.id===id);
+  if(item) item[campo] = valor;
+}
+
+async function delChecklistItem(id){
+  if(!confirm('Excluir esta tarefa?')) return;
+  await sb.from('checklist_itens').delete().eq('id', id);
+  cache.checklist = cache.checklist.filter(c=>c.id!==id);
+  renderChecklist();
+}
+
+function populateFiltroChecklistData(){
+  const datas = new Set(cache.checklist.map(c=>c.data).filter(Boolean));
+  const sel = document.getElementById('ck-filtro-data');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas as datas</option>';
+  [...datas].sort().reverse().forEach(d=>{
+    sel.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+  if(cur) sel.value = cur;
+  if(!document.getElementById('ck-data').value) document.getElementById('ck-data').value = today();
+}
+
+function renderChecklist(){
+  const filtro = document.getElementById('ck-filtro-data').value;
+  const tbody = document.getElementById('tbody-checklist');
+  const lista = cache.checklist.filter(c=>!filtro || c.data===filtro);
+  const feitas = lista.filter(c=>c.concluido).length;
+
+  tbody.innerHTML = lista.length ? lista.map(c=>`<tr>
+    <td>${c.data}</td>
+    <td title="${c.titulo}">${c.titulo}</td>
+    <td style="text-align:center">
+      <input type="checkbox" ${c.concluido?'checked':''} style="width:18px;height:18px;cursor:pointer;" onchange="toggleChecklistItem(${c.id}, this.checked)"/>
+    </td>
+    <td><input type="text" value="${c.observacao||''}" placeholder="—" style="width:100%;border:1px solid var(--border-strong);border-radius:5px;padding:4px 6px;font-size:12px;" onblur="salvarObsChecklist(${c.id},'observacao',this.value)"/></td>
+    <td><input type="text" value="${c.motivo||''}" placeholder="${c.concluido?'—':'Ex: faltou material'}" ${c.concluido?'style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;background:var(--surface-3);color:var(--text-3);"':'style="width:100%;border:1px solid var(--border-strong);border-radius:5px;padding:4px 6px;font-size:12px;"'} onblur="salvarObsChecklist(${c.id},'motivo',this.value)"/></td>
+    <td><button class="btn-danger" onclick="delChecklistItem(${c.id})">✕</button></td>
+  </tr>`).join('') : `<tr><td colspan="6" class="empty">Nenhuma tarefa</td></tr>`;
+
+  document.getElementById('ck-total-label').textContent = lista.length ? `${feitas} de ${lista.length} concluídas` : '';
+}
+
+// ---- CONFIGURAÇÕES ----
+function renderConfiguracoes(){
+  document.getElementById('cfg-email').value = currentUser.email;
+  const prof = cache.perfilAtual || {};
+  document.getElementById('cfg-nome-empresa').value = prof.empresa || '';
+  document.getElementById('cfg-nova-senha').value = '';
+  document.getElementById('cfg-confirma-senha').value = '';
+  document.getElementById('cfg-senha-err').style.display = 'none';
+}
+
+async function salvarPerfilConfig(){
+  const empresa = document.getElementById('cfg-nome-empresa').value.trim();
+  const {error} = await sb.from('profiles').update({empresa}).eq('id', usuarioAtivoId);
+  if(error){ toast('Erro ao salvar: '+error.message,'var(--red)'); return; }
+  cache.perfilAtual = {...cache.perfilAtual, empresa};
+  aplicarMarcaSidebar(cache.perfilAtual, empresa);
+  toast('Perfil salvo!');
+}
+
+async function alterarSenha(){
+  const novaSenha = document.getElementById('cfg-nova-senha').value;
+  const confirmaSenha = document.getElementById('cfg-confirma-senha').value;
+  const errEl = document.getElementById('cfg-senha-err');
+  errEl.style.display = 'none';
+  if(!novaSenha || novaSenha.length < 6){ errEl.textContent='A senha precisa ter no mínimo 6 caracteres.'; errEl.style.display='block'; return; }
+  if(novaSenha !== confirmaSenha){ errEl.textContent='As senhas não coincidem.'; errEl.style.display='block'; return; }
+  const {error} = await sb.auth.updateUser({password: novaSenha});
+  if(error){ errEl.textContent = error.message; errEl.style.display='block'; return; }
+  document.getElementById('cfg-nova-senha').value = '';
+  document.getElementById('cfg-confirma-senha').value = '';
+  toast('Senha atualizada com sucesso!');
 }
 
 // ---- APARÊNCIA ----
