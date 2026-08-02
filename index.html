@@ -279,7 +279,6 @@ tbody tr:hover td{background:var(--surface-2);}
       <div class="nav-item" onclick="showTab('boletos',this)"><span class="nav-icon">&#x1F4CB;</span> Boletos</div>
       <div class="nav-item" onclick="showTab('checklist',this)"><span class="nav-icon">&#x2705;</span> Checklist</div>
       <div class="nav-item" onclick="showTab('cadastros',this)"><span class="nav-icon">&#x2699;</span> Cadastros</div>
-      <div class="nav-item" onclick="showTab('aparencia',this)"><span class="nav-icon">&#x1F3A8;</span> Aparência</div>
       <div class="nav-group">Conta</div>
       <div class="nav-item" onclick="showTab('configuracoes',this)"><span class="nav-icon">&#x1F464;</span> Configurações</div>
     </div>
@@ -536,59 +535,50 @@ tbody tr:hover td{background:var(--surface-2);}
       </div>
 
       <!-- APARÊNCIA -->
-      <div class="section" id="tab-aparencia">
-        <div class="card" style="max-width:520px">
-          <div class="card-title">&#x1F3A8; Personalização visual</div>
-          <p class="tip">Escolha as cores e a logo que aparecem no seu sistema. Só você vê essas mudanças na sua conta.</p>
-
-          <div class="form-row" style="margin-bottom:16px">
-            <div class="form-group">
-              <label>Cor primária (destaques, botões)</label>
-              <input type="color" id="ap-cor-primaria" style="height:38px;padding:2px;"/>
-            </div>
-            <div class="form-group">
-              <label>Cor secundária (menu lateral)</label>
-              <input type="color" id="ap-cor-secundaria" style="height:38px;padding:2px;"/>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:16px">
-            <label>Nome da empresa</label>
-            <input type="text" id="ap-nome-empresa" placeholder="Ex: Restaurante do João"/>
-          </div>
-
-          <div class="form-group" style="margin-bottom:16px">
-            <label>O que exibir no menu lateral</label>
-            <select id="ap-mostrar-marca" onchange="toggleUploadLogo()">
-              <option value="nome">Nome da empresa</option>
-              <option value="logo">Logo (enviar imagem)</option>
-              <option value="nenhum">Não exibir nada</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="ap-upload-box" style="display:none;margin-bottom:16px">
-            <label>Logo da empresa (PNG, fundo transparente recomendado)</label>
-            <input type="file" id="ap-logo-input" accept="image/png,image/jpeg" onchange="previewLogo(event)"/>
-            <div id="ap-logo-preview" style="margin-top:10px;display:none;">
-              <img id="ap-logo-preview-img" style="max-width:120px;max-height:60px;object-fit:contain;background:var(--dark-2);padding:8px;border-radius:6px;"/>
-            </div>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn-primary" onclick="salvarAparencia()">Salvar aparência</button>
-            <button class="btn-secondary" onclick="resetarAparencia()">Restaurar padrão</button>
-          </div>
-        </div>
-      </div>
-
       <!-- CHECKLIST -->
       <div class="section" id="tab-checklist">
         <div class="card">
           <div class="card-title">&#x2705; Nova tarefa</div>
           <div class="form-section"><div class="form-row">
-            <div class="form-group"><label>Data</label><input type="date" id="ck-data"/></div>
+            <div class="form-group"><label>Data de início</label><input type="date" id="ck-data"/></div>
             <div class="form-group" style="flex:2"><label>Tarefa</label><input type="text" id="ck-titulo" placeholder="Ex: Conferir temperatura da geladeira" onkeydown="if(event.key==='Enter') addChecklistItem()"/></div>
           </div></div>
+
+          <div class="rec-box">
+            <div class="rec-box-title">&#x1F501; Recorrência</div>
+            <div class="rec-row">
+              <div class="form-group" style="min-width:170px">
+                <label>Repetir</label>
+                <select id="ck-rec-tipo" onchange="toggleRecChecklist()">
+                  <option value="nenhuma">Não repetir</option>
+                  <option value="diaria">Todo dia</option>
+                  <option value="semanal">Toda semana</option>
+                  <option value="quinzenal">A cada 15 dias</option>
+                  <option value="dias_semana">Dias específicos da semana</option>
+                  <option value="mensal">Todo mês</option>
+                  <option value="anual">Todo ano</option>
+                </select>
+              </div>
+              <div class="form-group" id="ck-box-n" style="min-width:110px;display:none">
+                <label id="ck-label-n">Quantas vezes gerar</label>
+                <input type="number" id="ck-n" value="30" min="2" max="365" oninput="previewRecChecklist()"/>
+              </div>
+              <div class="preview-text" id="ck-preview-rec"></div>
+            </div>
+            <div class="form-group" id="ck-box-dias-semana" style="display:none;margin-top:10px;">
+              <label style="margin-bottom:8px;">Escolha os dias</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="1" class="ck-dia-check" onchange="previewRecChecklist()"/> Seg</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="2" class="ck-dia-check" onchange="previewRecChecklist()"/> Ter</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="3" class="ck-dia-check" onchange="previewRecChecklist()"/> Qua</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="4" class="ck-dia-check" onchange="previewRecChecklist()"/> Qui</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="5" class="ck-dia-check" onchange="previewRecChecklist()"/> Sex</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="6" class="ck-dia-check" onchange="previewRecChecklist()"/> Sáb</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;"><input type="checkbox" value="0" class="ck-dia-check" onchange="previewRecChecklist()"/> Dom</label>
+              </div>
+            </div>
+          </div>
+
           <div class="btn-row">
             <button class="btn-primary" onclick="addChecklistItem()">+ Adicionar tarefa</button>
           </div>
@@ -624,7 +614,6 @@ tbody tr:hover td{background:var(--surface-2);}
                 <input type="text" id="cfg-nome-empresa" placeholder="Ex: Restaurante do João"/>
               </div>
               <div class="btn-row"><button class="btn-primary" onclick="salvarPerfilConfig()">Salvar perfil</button></div>
-              <p class="tip" style="margin-top:14px">Quer mudar cores e logo? Isso fica na aba <strong>Aparência</strong>.</p>
             </div>
 
             <div class="card">
@@ -643,6 +632,44 @@ tbody tr:hover td{background:var(--surface-2);}
           </div>
 
           <div>
+            <div class="card">
+              <div class="card-title">&#x1F3A8; Personalização visual</div>
+              <p class="tip">Escolha as cores e a logo que aparecem no seu sistema. Só você vê essas mudanças na sua conta.</p>
+
+              <div class="form-row" style="margin-bottom:16px">
+                <div class="form-group">
+                  <label>Cor primária (destaques, botões)</label>
+                  <input type="color" id="ap-cor-primaria" style="height:38px;padding:2px;"/>
+                </div>
+                <div class="form-group">
+                  <label>Cor secundária (menu lateral)</label>
+                  <input type="color" id="ap-cor-secundaria" style="height:38px;padding:2px;"/>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom:16px">
+                <label>O que exibir no menu lateral</label>
+                <select id="ap-mostrar-marca" onchange="toggleUploadLogo()">
+                  <option value="nome">Nome da empresa</option>
+                  <option value="logo">Logo (enviar imagem)</option>
+                  <option value="nenhum">Não exibir nada</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="ap-upload-box" style="display:none;margin-bottom:16px">
+                <label>Logo da empresa (PNG, fundo transparente recomendado)</label>
+                <input type="file" id="ap-logo-input" accept="image/png,image/jpeg" onchange="previewLogo(event)"/>
+                <div id="ap-logo-preview" style="margin-top:10px;display:none;">
+                  <img id="ap-logo-preview-img" style="max-width:120px;max-height:60px;object-fit:contain;background:var(--dark-2);padding:8px;border-radius:6px;"/>
+                </div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn-primary" onclick="salvarAparencia()">Salvar aparência</button>
+                <button class="btn-secondary" onclick="resetarAparencia()">Restaurar padrão</button>
+              </div>
+            </div>
+
             <div class="card">
               <div class="card-title">&#x1F4CA; Plano atual</div>
               <div class="badge pago" style="font-size:13px;padding:6px 14px;margin-bottom:10px;display:inline-block;">Teste gratuito</div>
@@ -1051,7 +1078,7 @@ async function inserirDefaultsBancos(){
 }
 
 // ---- UI ----
-const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros',aparencia:'Aparência',checklist:'Checklist',configuracoes:'Configurações'};
+const TITLES={dashboard:'Dashboard',receitas:'Receitas',despesas:'Despesas',movimentacao:'Movimentação',boletos:'Boletos a Vencer',cadastros:'Cadastros',checklist:'Checklist',configuracoes:'Configurações'};
 
 function showTab(t, el){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
@@ -1065,9 +1092,8 @@ function showTab(t, el){
   if(t==='movimentacao'){populateSelects();renderMov();}
   if(t==='boletos') renderBoletos();
   if(t==='cadastros') renderCadastros();
-  if(t==='aparencia') renderAparencia();
   if(t==='checklist'){populateFiltroChecklistData();renderChecklist();}
-  if(t==='configuracoes') renderConfiguracoes();
+  if(t==='configuracoes'){renderConfiguracoes();renderAparencia();}
 }
 
 function toast(msg, color){
@@ -1175,6 +1201,7 @@ function cancelarDup(tipo){
 // ---- DATAS ----
 function addMonths(d,n){const dt=new Date(d+'T12:00:00');dt.setMonth(dt.getMonth()+n);return dt.toISOString().split('T')[0];}
 function addWeeks(d,n){const dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()+n*7);return dt.toISOString().split('T')[0];}
+function addDays(d,n){const dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];}
 function addYears(d,n){const dt=new Date(d+'T12:00:00');dt.setFullYear(dt.getFullYear()+n);return dt.toISOString().split('T')[0];}
 
 function toggleRec(){
@@ -1544,19 +1571,90 @@ function renderCadastros(){
 }
 
 // ---- CHECKLIST ----
+function gerarDatasRecorrenciaChecklist(){
+  const tipo = document.getElementById('ck-rec-tipo').value;
+  const dataBase = document.getElementById('ck-data').value || today();
+  const n = parseInt(document.getElementById('ck-n').value) || 30;
+
+  if(tipo === 'nenhuma') return [dataBase];
+
+  if(tipo === 'dias_semana'){
+    const diasSelecionados = [...document.querySelectorAll('.ck-dia-check:checked')].map(el=>parseInt(el.value));
+    if(!diasSelecionados.length) return [];
+    const datas = [];
+    let cursor = dataBase;
+    let tentativas = 0;
+    while(datas.length < n && tentativas < 400){
+      const dt = new Date(cursor+'T12:00:00');
+      if(diasSelecionados.includes(dt.getDay())) datas.push(cursor);
+      cursor = addDays(cursor, 1);
+      tentativas++;
+    }
+    return datas;
+  }
+
+  const datas = [dataBase];
+  for(let i=1;i<n;i++){
+    if(tipo==='diaria') datas.push(addDays(dataBase,i));
+    else if(tipo==='semanal') datas.push(addWeeks(dataBase,i));
+    else if(tipo==='quinzenal') datas.push(addDays(dataBase,i*15));
+    else if(tipo==='mensal') datas.push(addMonths(dataBase,i));
+    else if(tipo==='anual') datas.push(addYears(dataBase,i));
+  }
+  return datas;
+}
+
+function toggleRecChecklist(){
+  const tipo = document.getElementById('ck-rec-tipo').value;
+  const boxN = document.getElementById('ck-box-n');
+  const boxDias = document.getElementById('ck-box-dias-semana');
+  const labelN = document.getElementById('ck-label-n');
+
+  if(tipo === 'nenhuma'){
+    boxN.style.display = 'none';
+    boxDias.style.display = 'none';
+    document.getElementById('ck-preview-rec').textContent = '';
+    return;
+  }
+  boxN.style.display = 'flex';
+  boxDias.style.display = tipo === 'dias_semana' ? 'block' : 'none';
+  const labels = {diaria:'Quantos dias gerar', semanal:'Quantas semanas', quinzenal:'Quantas quinzenas', dias_semana:'Quantas ocorrências', mensal:'Quantos meses', anual:'Quantos anos'};
+  labelN.textContent = labels[tipo] || 'Quantas vezes gerar';
+  previewRecChecklist();
+}
+
+function previewRecChecklist(){
+  const datas = gerarDatasRecorrenciaChecklist();
+  const tipo = document.getElementById('ck-rec-tipo').value;
+  if(tipo === 'nenhuma') return;
+  if(!datas.length){ document.getElementById('ck-preview-rec').textContent = 'Selecione ao menos um dia da semana'; return; }
+  document.getElementById('ck-preview-rec').textContent = datas.length+' tarefas: '+datas.slice(0,3).join(' · ')+(datas.length>3?'…':'');
+}
+
+document.addEventListener('input', e=>{
+  if(['ck-n','ck-data'].includes(e.target.id)) previewRecChecklist();
+});
+
 async function addChecklistItem(){
   const titulo = document.getElementById('ck-titulo').value.trim();
-  const data = document.getElementById('ck-data').value || today();
   if(!titulo){ toast('Digite a tarefa','var(--red)'); return; }
-  const {data: novo, error} = await sb.from('checklist_itens').insert({
+
+  const datas = gerarDatasRecorrenciaChecklist();
+  if(!datas.length){ toast('Selecione ao menos um dia da semana','var(--red)'); return; }
+
+  const rows = datas.map(data => ({
     user_id: usuarioAtivoId, titulo, data, concluido: false, observacao: '', motivo: ''
-  }).select().single();
+  }));
+
+  const {data: novos, error} = await sb.from('checklist_itens').insert(rows).select();
   if(error){ toast('Erro: '+error.message,'var(--red)'); return; }
-  cache.checklist.unshift(novo);
+
+  cache.checklist.unshift(...novos);
   document.getElementById('ck-titulo').value = '';
+  setSelect('ck-rec-tipo','nenhuma'); toggleRecChecklist();
   populateFiltroChecklistData();
   renderChecklist();
-  toast('Tarefa adicionada!');
+  toast(datas.length>1 ? `${datas.length} tarefas criadas!` : 'Tarefa adicionada!');
 }
 
 async function toggleChecklistItem(id, checked){
@@ -1652,7 +1750,6 @@ let logoBase64Temp = null;
 
 function renderAparencia(){
   const prof = cache.perfilAtual || {};
-  document.getElementById('ap-nome-empresa').value = prof.empresa || '';
   document.getElementById('ap-cor-primaria').value = prof.cor_primaria || '#C9A84C';
   document.getElementById('ap-cor-secundaria').value = prof.cor_secundaria || '#1A1A2E';
   document.getElementById('ap-mostrar-marca').value = prof.mostrar_marca || 'nome';
@@ -1683,11 +1780,10 @@ function previewLogo(e){
 }
 
 async function salvarAparencia(){
-  const empresa = document.getElementById('ap-nome-empresa').value.trim();
   const cor_primaria = document.getElementById('ap-cor-primaria').value;
   const cor_secundaria = document.getElementById('ap-cor-secundaria').value;
   const mostrar_marca = document.getElementById('ap-mostrar-marca').value;
-  const update = {empresa, cor_primaria, cor_secundaria, mostrar_marca};
+  const update = {cor_primaria, cor_secundaria, mostrar_marca};
   if(mostrar_marca === 'logo' && logoBase64Temp){ update.logo_base64 = logoBase64Temp; }
 
   const {error} = await sb.from('profiles').update(update).eq('id', usuarioAtivoId);
@@ -1695,7 +1791,7 @@ async function salvarAparencia(){
 
   cache.perfilAtual = {...cache.perfilAtual, ...update};
   aplicarTema(cache.perfilAtual);
-  aplicarMarcaSidebar(cache.perfilAtual, empresa);
+  aplicarMarcaSidebar(cache.perfilAtual, cache.perfilAtual.empresa || '');
   toast('Aparência salva com sucesso!');
 }
 
